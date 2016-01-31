@@ -1,7 +1,5 @@
-// em_test.cpp : Defines the entry point for the console application.
-//
-
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <map>
 #include <unordered_map>
@@ -79,21 +77,38 @@ std::map<int, int> Sequence::smart_cache_;
 //std::vector<int> Sequence::smart_cache_(1'000'000, 0);
 #endif
 
+class Timer {
+public:
+    Timer() : beg_(clock_::now()) {}
+    void reset() { beg_ = clock_::now(); }
+    double elapsed() const {
+        return std::chrono::duration_cast<second_>
+               (clock_::now() - beg_).count();
+    }
+
+private:
+    typedef std::chrono::high_resolution_clock clock_;
+    typedef std::chrono::duration<double, std::ratio<1>> second_;
+    std::chrono::time_point<clock_> beg_;
+};
 
 int main() {
-    //Sequence s{ 10 };
-    //s.calculate();
-    //s.print();
-    //std::cout << s.length() << std::endl;
-
     std::map<int, int> seeds_to_lengths_;
+
+    Timer tmr;
+
     for (int s = 1; s < 1'000'000; ++s) {
         Sequence seq{ s };
         seeds_to_lengths_[s] = seq.calculate();
+#ifdef PROGRESS
         if (s % 1000 == 0) {
             std::cout << ".";
         }
+#endif
     }
+
+    double t = tmr.elapsed();
+    std::cout << t << " seconds" << std::endl;
 
     auto pElem = std::max_element(std::begin(seeds_to_lengths_),
                                   std::end(seeds_to_lengths_),
