@@ -6,8 +6,14 @@
 #include <string>
 #include <vector>
 
+#include "tbb/tbb.h"
+#include "tbb/concurrent_hash_map.h"
+#include "tbb/concurrent_vector.h"
+
+#define RUNSIZE 1'000'000
 #undef VERBOSE
 #undef CACHING
+#undef PROGRESS
 
 class Sequence {
 private:
@@ -22,7 +28,7 @@ public:
         //nop
     }
 
-    static unsigned long nextValueFor(const unsigned long present_value) {
+    unsigned long nextValueFor(const unsigned long present_value) {
         if (present_value % 2 == 0) {
             return present_value / 2;
         } else {
@@ -41,7 +47,7 @@ public:
 #ifdef VERBOSE
             std::cout << ".";
 #endif
-            current = Sequence::nextValueFor(current);
+            current = nextValueFor(current);
 
 #ifdef CACHING
             auto search = Sequence::smart_cache_.find(current);
@@ -93,27 +99,32 @@ private:
 };
 
 int main() {
-    std::map<int, int> seeds_to_lengths_;
+    tbb::concurrent_vector<int> seeds_to_lengths_(RUNSIZE + 1, 0);
 
     Timer tmr;
 
-    for (int s = 1; s < 1'000'000; ++s) {
+    tbb::parallel_for(1, RUNSIZE, 1, [ &seeds_to_lengths_](int s) {
         Sequence seq{ s };
         seeds_to_lengths_[s] = seq.calculate();
 #ifdef PROGRESS
-        if (s % 1000 == 0) {
+        if (s % 1 == 0) {
             std::cout << ".";
         }
+        return;
 #endif
-    }
+    });
 
     double t = tmr.elapsed();
     std::cout << t << " seconds" << std::endl;
 
-    auto pElem = std::max_element(std::begin(seeds_to_lengths_),
-                                  std::end(seeds_to_lengths_),
-    [](const std::pair<int, int>& p1, const std::pair<int, int>& p2) { return p1.second < p2.second; });
+    auto pElem = std::max_element(std::begin(seeds_to_lengths_), std::end(seeds_to_lengths_));
+    std::cout << std::endl << "The longest length of " << *pElem << " terms is for starting seed " << std::distance(std::begin(seeds_to_lengths_), pElem) << '\n';
+    //auto pElem = std::max_element(std::begin(seeds_to_lengths_),
+    //                              std::end(seeds_to_lengths_),
+    //[](const std::pair<int, int>& p1, const std::pair<int, int>& p2) { return p1.second < p2.second; });
 
-    std::cout << std::endl << "The longest length of " << pElem->second << " terms is for starting seed " << pElem->first << std::endl;
+    //std::cout << std::endl << "The longest length of " << pElem->second << " terms is for starting seed " << pElem->first << std::endl;
+
+    return 0;
 }
 
