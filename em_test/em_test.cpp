@@ -10,7 +10,7 @@
 #include "tbb/concurrent_hash_map.h"
 #include "tbb/concurrent_vector.h"
 
-#define RUNSIZE 1'000'000
+#define RUNSIZE 10'000'000
 #undef VERBOSE
 #undef CACHING
 #undef PROGRESS
@@ -19,9 +19,11 @@ class Sequence {
 private:
     unsigned long seed_;
 
+#ifdef CACHING
     //static std::unordered_map<int, int> smart_cache_;
     static std::map<int, int> smart_cache_;
     //static std::vector<int> smart_cache_;
+#endif
 
 public:
     Sequence(int seed) : seed_(seed) {
@@ -119,11 +121,6 @@ int main() {
 
     auto pElem = std::max_element(std::begin(seeds_to_lengths_), std::end(seeds_to_lengths_));
     std::cout << std::endl << "The longest length of " << *pElem << " terms is for starting seed " << std::distance(std::begin(seeds_to_lengths_), pElem) << '\n';
-    //auto pElem = std::max_element(std::begin(seeds_to_lengths_),
-    //                              std::end(seeds_to_lengths_),
-    //[](const std::pair<int, int>& p1, const std::pair<int, int>& p2) { return p1.second < p2.second; });
-
-    //std::cout << std::endl << "The longest length of " << pElem->second << " terms is for starting seed " << pElem->first << std::endl;
 
     return 0;
 }
